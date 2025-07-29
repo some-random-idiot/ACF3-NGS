@@ -14,18 +14,24 @@ local InchToMm = ACF.InchToMm
 -- Bunched all of the definitions together due to some loading issue
 
 do	-- Turret drives
+	local Clamp = math.Clamp
+
 	local function ClampAngle(A, Amin, Amax)
 		local p, y, r
 
-		if A.p < Amin.p then p = Amin.p elseif A.p > Amax.p then p = Amax.p else p = A.p end
-		if A.y < Amin.y then y = Amin.y elseif A.y > Amax.y then y = Amax.y else y = A.y end
-		if A.r < Amin.r then r = Amin.r elseif A.r > Amax.r then r = Amax.r else r = A.r end
+		p = Clamp(A[1], Amin[1], Amax[1])
+		y = Clamp(A[2], Amin[2], Amax[2])
+		r = Clamp(A[3], Amin[3], Amax[3])
 
 		return Angle(p, y, r)
 	end
 
+	local WillUseSmallModel = function(Size) return Size <= 12.5 end
+	Turrets.WillUseSmallModel = WillUseSmallModel
+
 	Turrets.Register("1-Turret", {
 		Name		= "Turrets",
+		SpawnModel  = "models/acf/core/t_ring.mdl",
 		Description	= "#acf.descs.turrets",
 		Entity		= "acf_turret",
 		CreateMenu	= ACF.CreateTurretMenu,
@@ -48,7 +54,7 @@ do	-- Turret drives
 		GetRingHeight	= function(TurretData, Size)
 			local RingHeight = math.max(Size * TurretData.Ratio, 4)
 
-			if (TurretData.Type == "Turret-H") and (Size <= 12.5) then
+			if (TurretData.Type == "Turret-H") and WillUseSmallModel(Size) then
 				return 12 -- sticc
 			end
 
@@ -152,7 +158,7 @@ do	-- Turret drives
 			Description		= "#acf.descs.turrets.horizontal",
 			Model			= "models/acf/core/t_ring.mdl",
 			ModelSmall		= "models/holograms/cylinder.mdl", -- To be used for diameters <= 12.5u, for RWS or other small turrets
-			Mass			= 34, -- At default size, this is the mass of the turret ring. Will scale up/down with diameter difference
+			Mass			= 30, -- At default size, this is the mass of the turret ring. Will scale up/down with diameter difference
 
 			Size = {
 				Base		= 60,	-- The default size for the menu
@@ -167,8 +173,8 @@ do	-- Turret drives
 			},
 
 			Armor			= {
-				Min			= 50,
-				Max			= 300
+				Min			= 2.5,
+				Max			= 80
 			},
 
 			MassLimit		= {
@@ -191,20 +197,21 @@ do	-- Turret drives
 				end,
 
 				GetTargetBearing	= function(Turret, StabAmt)
-					local Rotator = Turret.Rotator
+					local TurretTbl = Turret:GetTable()
+					local Rotator = TurretTbl.Rotator
 
-					if Turret.HasArc then
-						if Turret.Manual then
-							return Rotator:WorldToLocalAngles(Turret:LocalToWorldAngles(Angle(0, -math.Clamp(Turret.DesiredDeg, Turret.MinDeg, Turret.MaxDeg), 0))).yaw
+					if TurretTbl.HasArc then
+						if TurretTbl.Manual then
+							return Rotator:WorldToLocalAngles(Turret:LocalToWorldAngles(Angle(0, -math.Clamp(TurretTbl.DesiredDeg, TurretTbl.MinDeg, TurretTbl.MaxDeg), 0))).yaw
 						else
-							local AngDiff	= Turret.Rotator:WorldToLocalAngles(Turret.LastRotatorAngle)
-							local LocalDesiredAngle = ClampAngle(Turret:WorldToLocalAngles(Turret.DesiredAngle) - Angle(0, StabAmt, 0) - AngDiff, Angle(0, -Turret.MaxDeg, 0), Angle(0, -Turret.MinDeg, 0))
+							local AngDiff = Rotator:WorldToLocalAngles(TurretTbl.LastRotatorAngle)
+							local LocalDesiredAngle = ClampAngle(Turret:WorldToLocalAngles(TurretTbl.DesiredAngle) - Angle(0, StabAmt, 0) - AngDiff, Angle(0, -TurretTbl.MaxDeg, 0), Angle(0, -TurretTbl.MinDeg, 0))
 
 							return Rotator:WorldToLocalAngles(Turret:LocalToWorldAngles(LocalDesiredAngle)).yaw
 						end
 					else
-						local AngDiff	= Turret.Rotator:WorldToLocalAngles(Turret.LastRotatorAngle)
-						return Turret.Manual and (Rotator:WorldToLocalAngles(Turret:LocalToWorldAngles(Angle(0, -Turret.DesiredDeg, 0))).yaw) or (Rotator:WorldToLocalAngles(Turret.DesiredAngle + AngDiff).yaw - StabAmt)
+						local AngDiff = Rotator:WorldToLocalAngles(TurretTbl.LastRotatorAngle)
+						return TurretTbl.Manual and (Rotator:WorldToLocalAngles(Turret:LocalToWorldAngles(Angle(0, -TurretTbl.DesiredDeg, 0))).yaw) or (Rotator:WorldToLocalAngles(TurretTbl.DesiredAngle + AngDiff).yaw - StabAmt)
 					end
 				end,
 
@@ -228,7 +235,7 @@ do	-- Turret drives
 			Name			= "Vertical Turret",
 			Description		= "#acf.descs.turrets.vertical",
 			Model			= "models/acf/core/t_trun.mdl",
-			Mass			= 25, -- At default size, this is the mass of the turret ring. Will scale up/down with diameter difference
+			Mass			= 24, -- At default size, this is the mass of the turret ring. Will scale up/down with diameter difference
 
 			Preview			= {
 				FOV = 105,
@@ -247,8 +254,8 @@ do	-- Turret drives
 			},
 
 			Armor			= {
-				Min			= 50,
-				Max			= 300
+				Min			= 5,
+				Max			= 30
 			},
 
 			MassLimit		= {
@@ -271,18 +278,19 @@ do	-- Turret drives
 				end,
 
 				GetTargetBearing	= function(Turret, StabAmt)
-					local Rotator = Turret.Rotator
+					local TurretTbl = Turret:GetTable()
+					local Rotator = TurretTbl.Rotator
 
-					if Turret.HasArc then
-						if Turret.Manual then
-							return Rotator:WorldToLocalAngles(Turret:LocalToWorldAngles(Angle(math.Clamp(-Turret.DesiredDeg, Turret.MinDeg, Turret.MaxDeg), 0, 0))).pitch
+					if TurretTbl.HasArc then
+						if TurretTbl.Manual then
+							return Rotator:WorldToLocalAngles(Turret:LocalToWorldAngles(Angle(math.Clamp(-TurretTbl.DesiredDeg, TurretTbl.MinDeg, TurretTbl.MaxDeg), 0, 0))).pitch
 						else
-							local LocalDesiredAngle = ClampAngle(Turret:WorldToLocalAngles(Turret.DesiredAngle) - Angle(StabAmt, 0, 0), Angle(-Turret.MaxDeg, 0, 0), Angle(-Turret.MinDeg, 0, 0))
+							local LocalDesiredAngle = ClampAngle(Turret:WorldToLocalAngles(TurretTbl.DesiredAngle) - Angle(StabAmt, 0, 0), Angle(-TurretTbl.MaxDeg, 0, 0), Angle(-TurretTbl.MinDeg, 0, 0))
 
 							return Rotator:WorldToLocalAngles(Turret:LocalToWorldAngles(LocalDesiredAngle)).pitch
 						end
 					else
-						return Turret.Manual and (Rotator:WorldToLocalAngles(Turret:LocalToWorldAngles(Angle(-Turret.DesiredDeg, 0, 0))).pitch) or (Rotator:WorldToLocalAngles(Turret.DesiredAngle).pitch - StabAmt)
+						return TurretTbl.Manual and (Rotator:WorldToLocalAngles(Turret:LocalToWorldAngles(Angle(-TurretTbl.DesiredDeg, 0, 0))).pitch) or (Rotator:WorldToLocalAngles(TurretTbl.DesiredAngle).pitch - StabAmt)
 					end
 				end,
 
@@ -305,6 +313,7 @@ end
 do	-- Turret motors
 	Turrets.Register("2-Motor", {
 		Name		= "Motors",
+		SpawnModel  = "models/acf/core/t_drive_e.mdl",
 		Description	= "#acf.descs.motors",
 		Entity		= "acf_turret_motor",
 		CreateMenu	= ACF.CreateTurretMotorMenu,
@@ -402,6 +411,7 @@ end
 do	-- Turret gyroscopes
 	Turrets.Register("3-Gyro", {
 		Name		= "Gyroscopes",
+		SpawnModel  = "models/bull/various/gyroscope.mdl",
 		Description	= "#acf.descs.gyros",
 		Entity		= "acf_turret_gyro",
 		CreateMenu	= ACF.CreateTurretGyroMenu,
@@ -453,6 +463,7 @@ end
 do	-- Turret computers
 	Turrets.Register("4-Computer", {
 		Name		= "Computers",
+		SpawnModel  = "models/acf/core/t_computer.mdl",
 		Description	= "#acf.descs.computers",
 		Entity		= "acf_turret_computer",
 		CreateMenu	= ACF.CreateTurretComputerMenu,
