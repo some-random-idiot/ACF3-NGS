@@ -49,7 +49,7 @@ end
 do -- Panel helpers
 	local Sorted = {}
 
-	function ACF.LoadSortedList(Panel, List, Member)
+	function ACF.LoadSortedList(Panel, List, Member, IconMember)
 		local Data = Sorted[List]
 
 		if not Data then
@@ -81,25 +81,28 @@ do -- Panel helpers
 		Panel:Clear()
 
 		for Index, Value in ipairs(Data.Choices) do
-			Panel:AddChoice(Value.Name, Value, Index == Current)
+			Panel:AddChoice(Value.Name, Value, Index == Current, IconMember and Value[IconMember] or nil)
 		end
 	end
 
 	--- Initializes the base menu panel for an ACF tool menu.
 	--- @param Panel panel The base panel to build the menu off of.
-	--- @param GlobalID string The identifier in the ACF global table where a reference to the menu panel should be stored.
+	--- @param GlobalID? string The identifier in the ACF global table where a reference to the menu panel should be stored. If not provided, will simply not be a singleton instance
 	--- @param ReloadCommand? string A concommand string to automatically add a button and concommand to refresh this menu.
 	function ACF.InitMenuBase(Panel, GlobalID, ReloadCommand)
-		if not IsValid(Panel) or not isstring(GlobalID) then return end
+		if not IsValid(Panel) then return end
 
-		local Menu = ACF[GlobalID]
+		local Menu
+		if GlobalID then
+			Menu = ACF[GlobalID]
 
-		-- MARCH: Adjusted this to remove the old panel and recreate it, rather than calling ClearAllTemporal/ClearAll
-		-- Because otherwise auto-refresh doesn't work.
-		-- If that breaks something else sorry, but we need something that allows auto-refresh to work so don't just revert this
-		if IsValid(Menu) then
-			Menu:Remove()
-			Menu = nil
+			-- MARCH: Adjusted this to remove the old panel and recreate it, rather than calling ClearAllTemporal/ClearAll
+			-- Because otherwise auto-refresh doesn't work.
+			-- If that breaks something else sorry, but we need something that allows auto-refresh to work so don't just revert this
+			if IsValid(Menu) then
+				Menu:Remove()
+				Menu = nil
+			end
 		end
 
 		Menu = vgui.Create("ACF_Panel")
@@ -107,19 +110,21 @@ do -- Panel helpers
 
 		Panel:AddItem(Menu)
 
-		ACF[GlobalID] = Menu
+		if GlobalID then
+			ACF[GlobalID] = Menu
 
-		if ReloadCommand then
-			concommand.Add(ReloadCommand, function()
-				if not IsValid(ACF[GlobalID]) then return end
+			if ReloadCommand then
+				concommand.Add(ReloadCommand, function()
+					if not IsValid(ACF[GlobalID]) then return end
 
-				local CreateMenuFunc = ACF["Create" .. GlobalID]
-				CreateMenuFunc(ACF[GlobalID].Panel)
-			end)
-		end
+					local CreateMenuFunc = ACF["Create" .. GlobalID]
+					CreateMenuFunc(ACF[GlobalID].Panel)
+				end)
+			end
 
-		if ReloadCommand then
-			Menu:AddMenuReload(ReloadCommand)
+			if ReloadCommand then
+				Menu:AddMenuReload(ReloadCommand)
+			end
 		end
 
 		return Menu

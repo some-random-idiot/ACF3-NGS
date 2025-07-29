@@ -6,6 +6,7 @@ local Ammo      = AmmoTypes.Register("AP")
 
 function Ammo:OnLoaded()
 	self.Name		 = "Armor Piercing"
+	self.SpawnIcon   = "acf/icons/shell_ap.png"
 	self.Model		 = "models/munitions/round_100mm_ap_shot.mdl"
 	self.Description = "#acf.descs.ammo.ap"
 	self.Blacklist = {
@@ -206,6 +207,8 @@ else
 		local EffectTable = {
 			Origin = Bullet.SimPos,
 			Normal = Bullet.SimFlight:GetNormalized(),
+			Scale = Bullet.SimFlight:Length(),
+			Magnitude = Bullet.RoundMass,
 			Radius = Bullet.Caliber,
 			DamageType = DecalIndex(Bullet.AmmoType),
 		}
@@ -259,20 +262,14 @@ else
 			return Text:format(MuzzleVel, ProjMass, PropMass)
 		end)
 
-		local PenStats = Base:AddLabel()
-		PenStats:TrackClientData("Projectile", "SetText")
-		PenStats:TrackClientData("Propellant")
-		PenStats:DefineSetter(function()
-			self:UpdateRoundData(ToolData, BulletData)
-
-			local Text     = language.GetPhrase("acf.menu.ammo.pen_stats_ap")
-			local MaxPen   = math.Round(BulletData.MaxPen, 2)
-			local R1P, R1V = self:GetRangedPenetration(BulletData, 300)
-			local R2P, R2V = self:GetRangedPenetration(BulletData, 800)
-
-			return Text:format(MaxPen, R1P, R1V, R2P, R2V)
+		local MaxPen = Base:AddLabel()
+		MaxPen:TrackClientData("Projectile", "SetText")
+		MaxPen:TrackClientData("Propellant")
+		MaxPen:TrackClientData("FillerRatio")
+		MaxPen:DefineSetter(function()
+			local Text		= language.GetPhrase("acf.menu.ammo.pen_stats_ap")
+			local MaxPen	= math.Round(BulletData.MaxPen, 2)
+			return Text:format(MaxPen)
 		end)
-
-		Base:AddLabel("#acf.menu.ammo.approx_pen_warning")
 	end
 end
