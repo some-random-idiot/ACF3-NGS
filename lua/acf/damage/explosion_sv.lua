@@ -29,9 +29,7 @@ function Damage.isValidTarget(Entity)
 	if not Type then return false end
 	if not Ballistics.TestFilter(Entity) then return false end
 
-	if Type ~= "Squishy" then return true end
-
-	return Entity:Health() > 0
+	return true
 end
 
 --- Returns a random position on the given entity.
