@@ -114,6 +114,8 @@ end
 
 local RequiredBulletDataProperties = {"Pos", "Flight"}
 function Ballistics.CreateBullet(BulletData)
+  	BulletData.FlightQuota = 1000  -- For preventing infinite DoBulletsFlight calls.
+
 	local Index = Ballistics.GetBulletIndex()
 	if not Index then return end -- Too many bullets in the air
 
@@ -225,6 +227,10 @@ function Ballistics.TestFilter(Entity, Bullet)
 end
 
 function Ballistics.DoBulletsFlight(Bullet)
+	-- There are some cases where a bullet files forever. This is a safety measure to prevent that.
+	if Bullet.FlightQuota < 1 then return Ballistics.RemoveBullet(Bullet) end
+	Bullet.FlightQuota = Bullet.FlightQuota - 1
+
 	local CanFly = hook.Run("ACF_PreBulletFlight", Bullet)
 
 	if not CanFly then return end
