@@ -941,9 +941,11 @@ do -- Crew related
 		local Cancelled = false
 		local Finished  = false
 		local Paused = false
+		local RecurseQuota = 1000
 		function RealLoop()
 			if Cancelled then return end
 			if Depends and not Depends(Config) then return end
+			if RecurseQuota < 1 then print("[ACF3] An augmented timer exceeded recursion quota!") return end
 
 			UpdateDelta(Config)
 
@@ -960,6 +962,7 @@ do -- Crew related
 			local timeleft = left and math.min(left, rand) or rand
 			-- If time left then recurse, otherwise call Finish
 			if timeleft > 0.001 then
+				RecurseQuota = RecurseQuota - 1
 				timer.Simple(timeleft, RealLoop)
 			else
 				if Finish and not Finished then Finished = true Finish(Config) end

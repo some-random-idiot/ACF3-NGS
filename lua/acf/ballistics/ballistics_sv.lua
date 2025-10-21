@@ -228,7 +228,10 @@ end
 
 function Ballistics.DoBulletsFlight(Bullet)
 	-- There are some cases where a bullet files forever. This is a safety measure to prevent that.
-	if Bullet.FlightQuota < 1 then return Ballistics.RemoveBullet(Bullet) end
+	if Bullet.FlightQuota < 1 then
+		print("[ACF3] A bullet exceeded flight quota!")
+		return Ballistics.RemoveBullet(Bullet)
+	end
 	Bullet.FlightQuota = Bullet.FlightQuota - 1
 
 	local CanFly = hook.Run("ACF_PreBulletFlight", Bullet)
