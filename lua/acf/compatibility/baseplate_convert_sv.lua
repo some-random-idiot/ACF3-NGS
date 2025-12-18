@@ -12,9 +12,13 @@ function RecursiveEntityRemove(ent, track)
     end
 end
 
+-- permutation is of the form (Axis mapped to X, Axis mapped to Y, Axis mapped to Z). Default is Vector(1, 2, 3) which means X -> X, Y -> Y, Z -> Z.
+-- addAngles is the angles to add to the model angles after the conversion
 local bpConvertibleModelPaths = {
-    { startWith = "models/sprops/rectangles", addAngles = Angle(0, 0, 0) },
-    { startWith = "models/sprops/misc/sq_holes", addAngles = Angle(0, 0, 90) },
+    { startWith = "models/sprops/rectangles", permutation = Vector(1, 2, 3), addAngles = Angle(0, 0, 0) },
+    { startWith = "models/sprops/misc/sq_holes", permutation = Vector(1, 2, 3), addAngles = Angle(0, 0, 90), warning = "This model normally has weird angles. Please make sure to check the angles after conversion." },
+    { startWith = "models/hunter/plates/plate", permutation = Vector(2, 1, 3), addAngles = Angle(0, -90, 0), warning = "This model normally has weird angles. Please make sure to check the angles after conversion." },
+    { startWith = "models/hunter/blocks/cube", permutation = Vector(2, 1, 3), addAngles = Angle(0, -90, 0), warning = "This model normally has weird angles. Please make sure to check the angles after conversion." },
 }
 
 function ACF.ConvertEntityToBaseplate(Player, Target)
@@ -52,17 +56,19 @@ function ACF.ConvertEntityToBaseplate(Player, Target)
     local Baseplate = Entities[Target:EntIndex()]
 
     -- Setup the dupe table to convert it to a baseplate
-    local w, l, t = BoxSize.x, BoxSize.y, BoxSize.z
+    local permutation = foundTranslation.permutation
+    local w, l, t = BoxSize[permutation.x], BoxSize[permutation.y], BoxSize[permutation.z]
     Baseplate.Class = "acf_baseplate"
-    Baseplate.Length = w
-    Baseplate.Width = l
-    Baseplate.Thickness = t
+    Baseplate.ACF_UserData = Baseplate.ACF_UserData or {}
+    Baseplate.ACF_UserData.Length = w
+    Baseplate.ACF_UserData.Width = l
+    Baseplate.ACF_UserData.Thickness = t
     Baseplate.PhysicsObjects[0].Angle = Baseplate.PhysicsObjects[0].Angle + foundTranslation.addAngles
 
     -- Swap width/thickness if necessary
     if foundTranslation.addAngles.z == 90 then
-        Baseplate.Width = t
-        Baseplate.Thickness = l
+        Baseplate.ACF_UserData.Width = t
+        Baseplate.ACF_UserData.Thickness = l
     end
 
     -- Delete everything now
@@ -86,6 +92,10 @@ function ACF.ConvertEntityToBaseplate(Player, Target)
     undo.AddEntity(NewBaseplate)
     undo.SetPlayer(Player)
     undo.Finish()
+
+    if foundTranslation.warning then
+        ACF.SendNotify(Player, false, foundTranslation.warning)
+    end
 
     return true, NewBaseplate
 end

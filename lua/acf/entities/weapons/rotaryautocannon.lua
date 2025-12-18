@@ -38,6 +38,12 @@ Weapons.Register("RAC", {
 		Min = 10,
 		Max = 20,
 	},
+	LimitConVar = {
+		Name = "_acf_rotaryautocannon",
+		Amount = 2,
+		Text = "Maximum amount of ACF rotary auto cannons a player can create."
+	},
+	CostScalar	= 1.75
 })
 
 Weapons.RegisterItem("14.5mmRAC", "RAC", {

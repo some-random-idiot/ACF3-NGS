@@ -59,6 +59,10 @@ CreateControl = function(Base)
 
 	if IsScalable then -- Scalable
 		local Bounds = Current.Class.Caliber
+		-- Set default caliber value before creating the slider to prevent nil value errors
+		local DefaultCaliber = ACF.GetClientNumber("Caliber", Bounds.Base)
+		ACF.SetClientData("Caliber", DefaultCaliber, true)
+
 		local Slider = Base:AddSlider("#acf.menu.caliber", Bounds.Min, Bounds.Max, 2)
 		Slider:SetClientData("Caliber", "OnValueChanged")
 		Slider:DefineSetter(function(Panel, _, _, Value)
@@ -181,12 +185,14 @@ local function CreateMenu(Menu)
 
 	local ClassBase  = Menu:AddPanel("ACF_Panel")
 	local ClassList  = ClassBase:AddComboBox()
+	ClassList:SetName("WeaponClassList")
 	local WeaponBase = Menu:AddCollapsible("#acf.menu.weapons.weapon_info", nil, "icon16/monitor_edit.png")
 	local EntName    = WeaponBase:AddTitle()
 	local ClassDesc  = WeaponBase:AddLabel()
 	local EntPreview = WeaponBase:AddModelPreview(nil, true)
 	local EntData    = WeaponBase:AddLabel()
 	local BreechIndex = WeaponBase:AddComboBox()
+	BreechIndex:SetName("WeaponBreechIndex")
 	local AmmoList   = ACF.CreateAmmoMenu(Menu)
 
 	-- Configuring the ACF Spawner tool

@@ -81,6 +81,7 @@ end
 if SERVER then
 	local Ballistics = ACF.Ballistics
 	local Entities   = Classes.Entities
+	local Conversion	= ACF.PointConversion
 
 	Entities.AddArguments("acf_ammo", "Projectile", "Propellant", "Tracer") -- Adding extra info to ammo crates
 
@@ -122,11 +123,14 @@ if SERVER then
 	function Ammo:GetCrateName()
 	end
 
-	function Ammo:GetCrateText(BulletData)
+	function Ammo:UpdateCrateOverlay(BulletData, State)
 		local Data = self:GetDisplayData(BulletData)
-		local Text = "Muzzle Velocity: %s m/s\nMax Penetration: %s mm"
+		State:AddNumber("Muzzle Velocity", BulletData.MuzzleVel, " m/s")
+		State:AddNumber("Max Penetration", Data.MaxPen, " mm")
+	end
 
-		return Text:format(math.Round(BulletData.MuzzleVel, 2), math.Round(Data.MaxPen, 2))
+	function Ammo:GetCost(BulletData)
+		return (BulletData.ProjMass * Conversion.Steel) + (BulletData.PropMass * Conversion.Propellant)
 	end
 
 	function Ammo:PropImpact(Bullet, Trace)
@@ -141,9 +145,10 @@ if SERVER then
 			Bullet.Energy = Energy
 
 			local HitRes = Ballistics.DoRoundImpact(Bullet, Trace)
+			local Overkill = HitRes.Overkill or 0 -- TODO: Sometimes Overkill ends up being nil, but that should never be the case??
 
-			if HitRes.Overkill > 0 then
-				table.insert(Filter, Target) --"Penetrate" (Ingoring the prop for the retry trace)
+			if Overkill > 0 then
+				table.insert(Filter, Target) -- "Penetrate" (Ignoring the prop for the retry trace)
 
 				Bullet.Flight = Bullet.Flight:GetNormalized() * (Energy.Kinetic * (1 - HitRes.Loss) * 2000 / Bullet.ProjMass) ^ 0.5 * ACF.MeterToInch
 

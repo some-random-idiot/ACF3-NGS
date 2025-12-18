@@ -38,6 +38,12 @@ Weapons.Register("GL", {
 		Min = 7.5,
 		Max = 10,
 	},
+	LimitConVar = {
+		Name = "_acf_grenadelauncher",
+		Amount = 4,
+		Text = "Maximum amount of ACF grenade launchers a player can create."
+	},
+	CostScalar	= 0.5
 })
 
 Weapons.RegisterItem("40mmGL", "GL", {

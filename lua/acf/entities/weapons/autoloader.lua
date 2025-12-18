@@ -12,7 +12,10 @@ Weapons.Register("AL", {
 	IsAutomatic = true,
 	Mass        = 2985,
 	Spread      = 0.08,
-	MagSize     = 6,
+	MagSize     = {
+		Min = 8,
+		Max = 12,
+	},
 	ScaleFactor = 1.0, -- Corrective factor to account for improperly scaled base models
 	TransferMult = 4, -- Thermal energy transfer rate
 	Round = {
@@ -33,8 +36,8 @@ Weapons.Register("AL", {
 		Max = 35,
 	},
 	Cyclic = {
-		Min = 15,
-		Max = 8,
+		Min = 20,
+		Max = 10,
 	},
 	BreechConfigs = {
 		MeasuredCaliber = 17.0,
@@ -44,7 +47,8 @@ Weapons.Register("AL", {
 			{Name = "Rear of Left Drum", LPos = Vector(-130.7, 27.5, 4.5), LAng = Angle(0, 0, 0), Width = 6.6929133858268, Height = 6.6929133858268},
 			{Name = "Rear of Right Drum", LPos = Vector(-130.7, -27.5, 4.5), LAng = Angle(0, 0, 0), Width = 6.6929133858268, Height = 6.6929133858268},
 		}
-	}
+	},
+	CostScalar	= 0.6
 })
 
 Weapons.RegisterItem("75mmAL", "AL", {

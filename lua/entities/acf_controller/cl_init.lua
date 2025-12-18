@@ -2,13 +2,15 @@ DEFINE_BASECLASS("acf_base_simple")
 
 include("shared.lua")
 
--- Locallization for performance...
+-- Localization for performance...
 local ScrW = ScrW
 local ScrH = ScrH
 local SetDrawColor = surface.SetDrawColor
 local DrawRect = surface.DrawRect
 local DrawCircle = surface.DrawCircle
 local DrawText = draw.DrawText
+
+local AmmoTypes    = ACF.Classes.AmmoTypes
 
 local TraceLine = util.TraceLine
 
@@ -81,6 +83,49 @@ end)
 net.Receive("ACF_Controller_CamInfo", function()
 	local Temp = net.ReadTable()
 	if #Temp > 0 then MyFilter = Temp end
+end)
+
+-- Receive ammo count info from server
+net.Receive("ACF_Controller_Ammo", function()
+	local Ent = net.ReadEntity()
+	local AmmoType = net.ReadString()
+	local AmmoCount = net.ReadUInt(16)
+
+	if not IsValid(Ent) then return end
+
+	Ent.PrimaryAmmoCountsByType = Ent.PrimaryAmmoCountsByType or {}
+	if not Ent.PrimaryAmmoCountsByType[AmmoType] then
+		Ent.PrimaryAmmoCountsByType[AmmoType] = 0
+
+		Ent.MaterialsByType = Ent.MaterialsByType or {}
+		local IconName = AmmoTypes.Get(AmmoType).SpawnIcon -- Something bad has happened if this doesn't work
+		Ent.MaterialsByType[AmmoType] = Material(IconName)
+
+		Ent.TypesSorted = Ent.TypesSorted or {}
+		table.insert(Ent.TypesSorted, AmmoType)
+		table.sort(Ent.TypesSorted)
+	end
+	Ent.PrimaryAmmoCountsByType[AmmoType] = AmmoCount
+end)
+
+local function SelectAmmoType(Index)
+	local NewAmmoType = MyController.TypesSorted and MyController.TypesSorted[Index] or nil
+	local ForceSwitch = MyController.SelectedAmmoType == NewAmmoType
+	net.Start("ACF_Controller_Ammo")
+	net.WriteUInt(MyController:EntIndex(), MAX_EDICT_BITS)
+	net.WriteString(NewAmmoType)
+	net.WriteBool(ForceSwitch)
+	net.SendToServer()
+	MyController.SelectedAmmoType = NewAmmoType
+end
+
+hook.Add("PlayerButtonDown", "ACFControllerSeatButtonDown", function(_, Button)
+	if not IsValid(MyController) then return end
+
+	if Button == KEY_1 then SelectAmmoType(1)
+	elseif Button == KEY_2 then SelectAmmoType(2)
+	elseif Button == KEY_3 then SelectAmmoType(3)
+	end
 end)
 
 UpdateCamera = function(ply)
@@ -183,13 +228,45 @@ hook.Add( "HUDPaintBackground", "ACFAddonControllerHUD", function()
 		DrawText("Fuel: " .. MyController:GetNWFloat("AHS_Fuel") .. unit, "DermaDefault", x + 310 * Scale, y + 250 * Scale, Col, TEXT_ALIGN_LEFT)
 	end
 
-	local Primary = MyController:GetNWEntity( "AHS_Primary", MyController )
-	if IsValid(Primary) then
-		local HitPos = ranger( Primary:GetPos(), Primary:GetForward(), 99999, MyFilter )
-		local sp = HitPos:ToScreen()
-		local Ready = MyController:GetNWBool("AHS_Primary_RD", false)
-		SetDrawColor( Ready and green or red )
-		DrawCircle( sp.x, sp.y, 10 * Scale)
+	for _, v in ipairs({"Primary", "Secondary", "Tertiary"}) do
+		local Entity = MyController:GetNWEntity( "AHS_" .. v, nil )
+		if IsValid(Entity) then
+			local HitPos = ranger( Entity:GetPos(), Entity:GetForward(), 99999, MyFilter )
+			local sp = HitPos:ToScreen()
+			local Ready = MyController:GetNWBool("AHS_" .. v .. "_RD", false)
+			SetDrawColor( Ready and green or red )
+			DrawCircle( sp.x, sp.y, 10 * Scale)
+		end
+	end
+
+	local LoadedAmmoType = MyController:GetNWString("AHS_Primary_AT", "")
+	for Index, AmmoType in pairs(MyController.TypesSorted or {}) do
+		local Material = MyController.MaterialsByType[AmmoType] or ""
+		local AmmoCount = MyController.PrimaryAmmoCountsByType[AmmoType] or 0
+		local ax = x - 400 * Scale + (46 * (Index - 1) * Scale)
+		local ay = y - 246 * Scale
+
+		-- Backing surface
+		surface.SetDrawColor(0, 0, 0, 100)
+		surface.DrawRect(ax, ay, 40 * Scale, 40 * Scale)
+
+		-- Outline
+		surface.SetDrawColor(Col)
+		surface.DrawOutlinedRect(ax, ay, 40 * Scale, 40 * Scale)
+
+		-- Outline currently selected ammo type
+		if AmmoType == MyController.SelectedAmmoType then
+			surface.DrawOutlinedRect(ax - 2 * Scale, ay - 2 * Scale, 44 * Scale, 44 * Scale)
+		end
+
+		-- Light up the currently loaded ammo type and dim the rest
+		if AmmoType == LoadedAmmoType then surface.SetDrawColor(255, 255, 255, 255)
+		else surface.SetDrawColor(150, 150, 150, 255) end
+
+		surface.SetMaterial(Material)
+		surface.DrawTexturedRect(ax + 4 * Scale, ay + 4 * Scale, 32 * Scale, 32 * Scale)
+
+		DrawText(AmmoCount, "DermaDefault", ax + 4 * Scale, ay + 4 * Scale, Col, TEXT_ALIGN_LEFT)
 	end
 end)
 
@@ -226,6 +303,7 @@ hook.Add("InputMouseApply", "ACFControllerCamMove", function(_, x, y, _)
 	net.SendToServer()
 end)
 
+local LastFOV = FOV
 hook.Add("PlayerBindPress", "ACFControllerScroll", function(ply, bind, _)
 	local delta = bind == "invnext" and 1 or bind == "invprev" and -1 or nil
 	if not delta then return end
@@ -237,6 +315,14 @@ hook.Add("PlayerBindPress", "ACFControllerScroll", function(ply, bind, _)
 	local MaxFOV = MyController:GetZoomMax()
 	local SpeedFOV = MyController:GetZoomSpeed()
 	FOV = math.Clamp(FOV + delta * SpeedFOV, MinFOV, MaxFOV)
+
+	if FOV ~= LastFOV then
+		LastFOV = FOV
+		net.Start("ACF_Controller_Zoom", true)
+		net.WriteUInt(MyController:EntIndex(), MAX_EDICT_BITS)
+		net.WriteFloat(FOV)
+		net.SendToServer()
+	end
 
 	return true
 end)

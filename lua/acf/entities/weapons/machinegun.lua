@@ -41,6 +41,12 @@ Weapons.Register("MG", {
 		Min = 900,
 		Max = 600,
 	},
+	LimitConVar = {
+		Name = "_acf_machinegun",
+		Amount = 4,
+		Text = "Maximum amount of ACF machine guns a player can create."
+	},
+	CostScalar	= 0.25
 })
 
 Weapons.RegisterItem("7.62mmMG", "MG", {

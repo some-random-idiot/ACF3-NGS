@@ -3,9 +3,11 @@
 -- Local Vars -----------------------------------
 local ACF          = ACF
 local Contraption  = ACF.Contraption
+local ModelData	   = ACF.ModelData
 local StringFind   = string.find
 local TimerSimple  = timer.Simple
 local Baddies	   = ACF.GlobalFilter
+local BaddiesLess  = ACF.ArmorableGlobalFilterExceptions
 local MinimumArmor = ACF.MinimumArmor
 local MaximumArmor = ACF.MaxThickness
 
@@ -36,24 +38,26 @@ end
 ]]--
 function ACF.IsLegal(Entity)
 	if not ACF.LegalChecks then return true end -- Legal checks are disabled
+	if Entity.ACF_IsNotLegalityChecked then return true end -- This entity is exempt from legality checks
 
+	local EntTbl = Entity:GetTable()
 	local Phys = Entity:GetPhysicsObject()
 
-	if not IsValid(Entity.ACF.PhysObj) or Entity.ACF.PhysObj ~= Phys then
+	if not IsValid(EntTbl.ACF.PhysObj) or EntTbl.ACF.PhysObj ~= Phys then
 		if Phys:GetVolume() then
-			Entity.ACF.PhysObj = Phys -- Updated PhysObj
+			EntTbl.ACF.PhysObj = Phys -- Updated PhysObj
 		else
 			ACF.Shame(Entity, "having a custom physics object (spherical).")
 			return false, "Invalid Physics", "Custom physics objects cannot be applied to ACF entities."
 		end
 	end
 	if not Entity:IsSolid() then ShameNotSolid(Entity) return false, "Not Solid", "The entity is invisible to projectiles." end
-	if Entity.ClipData and next(Entity.ClipData) then ACF.Shame(Entity, "having visclips.") return false, "Visual Clip", "Visual clip cannot be applied to ACF entities." end -- No visclip
-	if not ACF.GunsCanFire and Entity.IsACFWeapon then return false, "Cannot fire", "Firing disabled by the server's ACF settings." end
-	if not ACF.RacksCanFire and Entity.IsRack then return false, "Cannot fire", "Firing disabled by the server's ACF settings." end
+	if EntTbl.ClipData and next(EntTbl.ClipData) then ACF.Shame(Entity, "having visclips.") return false, "Visual Clip", "Visual clip cannot be applied to ACF entities." end -- No visclip
+	if not ACF.GunsCanFire and EntTbl.IsACFGun then return false, "Cannot fire", "Firing disabled by the server's ACF settings." end
+	if not ACF.RacksCanFire and EntTbl.IsRack then return false, "Cannot fire", "Firing disabled by the server's ACF settings." end
 
 	local Legal, Reason, Message, Timeout
-	if Entity.ACF_IsLegal then
+	if EntTbl.ACF_IsLegal then
 		Legal, Reason, Message, Timeout = Entity:ACF_IsLegal()
 	end
 
@@ -217,7 +221,7 @@ function ACF.Check(Entity, ForceUpdate) -- IsValid but for ACF
 	if not IsValid(Entity) then return false end
 
 	local Class = Entity:GetClass()
-	if Baddies[Class] then return false end
+	if Baddies[Class] and not BaddiesLess[Class] then return false end
 
 	local PhysObj = Entity:GetPhysicsObject()
 	if not IsValid(PhysObj) then return false end
@@ -249,6 +253,8 @@ function ACF.Activate(Entity, Recalc)
 
 	if not IsValid(PhysObj) then return end
 	if not EntTbl.ACF then EntTbl.ACF = {} end
+
+	ModelData.Populate(Entity:GetModel())
 
 	EntTbl.ACF.Type    = ACF.GetEntityType(Entity)
 	EntTbl.ACF.PhysObj = PhysObj

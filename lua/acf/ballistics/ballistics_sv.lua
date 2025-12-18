@@ -73,6 +73,7 @@ function Ballistics.CalcBulletFlight(Bullet)
 	local Correction = 0.5 * (Accel - Drag) * DeltaTime
 
 	Bullet.NextPos   = Bullet.Pos + ACF.Scale * DeltaTime * (Flight + Correction)
+	Bullet.TraceTo   = Bullet.Pos + ACF.Scale * (DeltaTime * 2) * (Flight + Correction)
 	Bullet.Flight    = Flight + (Accel - Drag) * DeltaTime
 	Bullet.LastThink = ClockTime
 	Bullet.DeltaTime = DeltaTime
@@ -172,7 +173,7 @@ end
 
 function Ballistics.GetImpactType(Trace, Entity)
 	if Trace.HitWorld then return "World" end
-	if Entity:IsPlayer() or Entity:IsNPC() then return "Prop" end
+	if Entity:IsPlayer() or Entity:IsNPC() or Entity:IsNextBot() then return "Prop" end
 
 	return IsValid(Entity:CPPIGetOwner()) and "Prop" or "World"
 end
@@ -262,7 +263,7 @@ function Ballistics.DoBulletsFlight(Bullet)
 	FlightTr.mask 	= Bullet.Mask
 	FlightTr.filter = Bullet.Filter
 	FlightTr.start 	= Bullet.Pos
-	FlightTr.endpos = Bullet.NextPos
+	FlightTr.endpos = Bullet.TraceTo
 
 	local traceRes = ACF.trace(FlightTr) -- Does not modify the bullet's original filter
 
@@ -392,6 +393,7 @@ do -- Terminal ballistics --------------------------
 			Bullet.Flight    = Flight
 			Bullet.Pos       = Position
 			Bullet.NextPos   = Position + Flight * Bullet.DeltaTime
+			Bullet.TraceTo   = Position + Flight * (Bullet.DeltaTime * 2)
 
 			HitRes.Ricochet = true
 		end
@@ -417,6 +419,7 @@ do -- Terminal ballistics --------------------------
 			Bullet.Flight      = Direction:GetNormalized() * Speed * ACF.Scale * Ricochet
 			Bullet.Pos         = Trace.HitPos
 			Bullet.NextPos     = Bullet.Pos + Bullet.Flight * DeltaTime
+			Bullet.TraceTo     = Bullet.Pos + Bullet.Flight * (DeltaTime * 2)
 
 			return "Ricochet"
 		end
