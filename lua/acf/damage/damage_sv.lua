@@ -141,6 +141,11 @@ function Damage.doSquishyDamage(Entity, DmgResult, DmgInfo)
 	local HitRes = DmgResult:GetBlank()
 	local Damage = 0
 
+	if Entity.LVS and DmgResult:GetPenetration() == 0 then
+		-- LVS vehicles have instrinsic armor that can't be penetrated by explosive rounds. Set a minimum penetration value to ensure damage is calculated properly.
+		DmgResult:SetPenetration(10)
+	end
+
 	DmgResult:SetFactor(1) -- We don't care about the penetration factor on squishy targets
 
 	if Hitbox == "none" then -- Default damage
